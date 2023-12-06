@@ -18,6 +18,7 @@ func handlerfunc(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintf(writer, "Orico天下无敌,一支穿云箭,千军万马来相见.")
 		fmt.Fprintf(writer, "\r\n<a href=\"http://www.baidu.com\">官网</a>\r\n<a href=\"\\mailto:zz_@live.cn\\\">联系我们</a>")
 	} else {
+		writer.WriteHeader(404)
 		fmt.Fprintf(writer, "你到底要哦该咯???")
 	}
 }
