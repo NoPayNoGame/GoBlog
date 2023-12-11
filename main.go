@@ -25,6 +25,9 @@ func main() {
 	//	重写404
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
+	//	中间件:强制内容为html
+	router.Use(forceHTMLMiddleware)
+
 	//	通过命名路由获取 URL 示例
 	homeURL, _ := router.Get("home").URL()
 	fmt.Println("homeURL:", homeURL)
@@ -35,8 +38,17 @@ func main() {
 
 }
 
+func forceHTMLMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		//	设置标头
+		writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		// 2. 继续处理请求
+		handler.ServeHTTP(writer, request)
+	})
+}
+
 func notFoundHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(writer, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
 }
@@ -56,11 +68,9 @@ func articlesShowHandeler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func aboutHandeler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(writer, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 <a href=\"mailto:summer@example.com\">summer@example.com</a>")
 }
 
 func homeHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(writer, "<h1>Hello, 欢迎来到 goblog！</h1>")
 }
