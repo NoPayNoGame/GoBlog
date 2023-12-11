@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 func main() {
@@ -34,8 +35,17 @@ func main() {
 	articleURL, _ := router.Get("articles.show").URL("id", "23")
 	fmt.Println("articleURL:", articleURL)
 
-	http.ListenAndServe(":3000", router)
+	http.ListenAndServe(":3000", removeTrailingSlash(router))
 
+}
+
+func removeTrailingSlash(router *mux.Router) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/" {
+			request.URL.Path = strings.TrimSuffix(request.URL.Path, "/")
+		}
+		router.ServeHTTP(writer, request)
+	})
 }
 
 func forceHTMLMiddleware(handler http.Handler) http.Handler {
