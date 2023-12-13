@@ -7,9 +7,10 @@ import (
 	"strings"
 )
 
+// 创建mux路由
+var router = mux.NewRouter()
+
 func main() {
-	//	创建mux路由
-	router := mux.NewRouter()
 
 	//	home
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
@@ -23,20 +24,42 @@ func main() {
 	//	POST方法
 	router.HandleFunc("/articles", articlesStoreHandeler).Methods("POST").Name("articles.store")
 
+	//	创建博文表单
+	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
+
 	//	重写404
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
 	//	中间件:强制内容为html
 	router.Use(forceHTMLMiddleware)
 
-	//	通过命名路由获取 URL 示例
-	homeURL, _ := router.Get("home").URL()
-	fmt.Println("homeURL:", homeURL)
-	articleURL, _ := router.Get("articles.show").URL("id", "23")
-	fmt.Println("articleURL:", articleURL)
-
 	http.ListenAndServe(":3000", removeTrailingSlash(router))
 
+}
+
+/*
+创建博文表单
+*/
+func articlesCreateHandler(writer http.ResponseWriter, request *http.Request) {
+	html := `
+	<!DOCTYPE html>
+	<html lang='en'>
+	<head>
+		<title>创建文章 -- 我的技术博客</title>
+	</head>
+	<form action="%s" method="post">
+		<p><input type="text" name="title"></p>
+		<p><textarea name = "body" cols ="30" rows="10"></textarea></p>
+        <p><button type="submit">提交</button></p>
+	</form>
+	</body>
+	</html>
+`
+	storeURL, _ := router.Get("articles.store").URL()
+	//storeURL, _ := router.Get("articles.store").URL()
+
+	fmt.Fprintf(writer, html, storeURL)
+	//fmt.Fprintf(writer, html)
 }
 
 func removeTrailingSlash(router *mux.Router) http.Handler {
