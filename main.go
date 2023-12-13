@@ -47,16 +47,15 @@ func articlesCreateHandler(writer http.ResponseWriter, request *http.Request) {
 	<head>
 		<title>创建文章 -- 我的技术博客</title>
 	</head>
-	<form action="%s" method="post">
-		<p><input type="text" name="title"></p>
-		<p><textarea name = "body" cols ="30" rows="10"></textarea></p>
+	<form action="%s?test=data" method="post">
+		<p><input type="text" name="MyTitle"></p>
+		<p><textarea name = "MyBody" cols ="30" rows="10"></textarea></p>
         <p><button type="submit">提交</button></p>
 	</form>
 	</body>
 	</html>
 `
 	storeURL, _ := router.Get("articles.store").URL()
-	//storeURL, _ := router.Get("articles.store").URL()
 
 	fmt.Fprintf(writer, html, storeURL)
 	//fmt.Fprintf(writer, html)
@@ -87,7 +86,24 @@ func notFoundHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func articlesStoreHandeler(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(writer, "POST创建新的文章")
+	//	如果解析错误,处理错误.
+	err := request.ParseForm()
+	if err != nil {
+		fmt.Fprintf(writer, "请提供正确的数据")
+	}
+
+	title := request.PostForm.Get("MyTitle")
+	//
+	//	打印PostForm
+	fmt.Fprintf(writer, "PostFrom:%v<br>", request.PostForm)
+	fmt.Fprintf(writer, "Form:%v<br>", request.Form)
+	fmt.Fprintf(writer, "MyTitle:%v<br><br><br>", title)
+
+	fmt.Fprintf(writer, "r.FormValue 中 MyTitle 的值为:%v<br>", request.FormValue("MyTitle"))
+	fmt.Fprintf(writer, "r.PostFormValue 中 MyTitle 的值为:%v<br><br><br>", request.PostFormValue("MyTitle"))
+
+	fmt.Fprintf(writer, "r.FormVlue 中 test 的值为:%v<br>", request.FormValue("test"))
+	fmt.Fprintf(writer, "r.PostFormValue 中 test 的值为:%v<br>", request.PostFormValue("test"))
 }
 
 func articlesIndexHandeler(writer http.ResponseWriter, request *http.Request) {
