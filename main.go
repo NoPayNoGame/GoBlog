@@ -1,12 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -20,7 +24,51 @@ type ArticlesFormData struct {
 // 创建mux路由
 var router = mux.NewRouter()
 
+// 创建数据库连接池
+var db *sql.DB
+
+func initDB() {
+	var err error
+
+	//	创建连接配置信息
+	config := mysql.Config{
+		User:                 "root",
+		Passwd:               "a651651651",
+		Net:                  "tcp",
+		Addr:                 "127.0.0.1:3306",
+		DBName:               "goBlog",
+		AllowNativePasswords: true,
+	}
+
+	//	准备数据库连接池
+	db, err = sql.Open("mysql", config.FormatDSN())
+	checkError(err)
+
+	//	设置最大连接数
+	db.SetMaxOpenConns(25)
+
+	//	设置最大空闲连接数
+	db.SetMaxIdleConns(25)
+
+	//	设置每个连接的过期时间
+	db.SetConnMaxIdleTime(5 * time.Minute)
+
+	//	尝试连接,失败会报错
+	err = db.Ping()
+	checkError(err)
+}
+
+// 错误处理
+func checkError(err error) {
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
 func main() {
+
+	//	初始化数据库
+	initDB()
 
 	//	home
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
