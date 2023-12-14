@@ -27,6 +27,50 @@ var router = mux.NewRouter()
 // 创建数据库连接池
 var db *sql.DB
 
+func main() {
+
+	//	初始化数据库
+	initDB()
+
+	//	创建数据表
+	createTables()
+
+	//	home
+	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
+	//	about
+	router.HandleFunc("/about", aboutHandeler).Methods("GET") //.Name("about")
+
+	//	get指定id返回对应内容
+	router.HandleFunc("/articles{id:[0-9]+}", articlesShowHandeler).Methods("GET").Name("articles.show")
+	//	get方法
+	router.HandleFunc("/articles", articlesIndexHandeler).Methods("GET").Name("articles.index")
+	//	POST方法
+	router.HandleFunc("/articles", articlesStoreHandeler).Methods("POST").Name("articles.store")
+
+	//	创建博文表单
+	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
+
+	//	重写404
+	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+
+	//	中间件:强制内容为html
+	router.Use(forceHTMLMiddleware)
+
+	http.ListenAndServe(":3000", removeTrailingSlash(router))
+
+}
+
+func createTables() {
+	createArticlesSQL := `CREATE TABLE IF NOT EXISTS articles(
+    id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+    title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    body longtext COLLATE utf8mb4_unicode_ci
+); `
+
+	_, err := db.Exec(createArticlesSQL)
+	checkError(err)
+}
+
 func initDB() {
 	var err error
 
@@ -63,36 +107,6 @@ func checkError(err error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-}
-
-func main() {
-
-	//	初始化数据库
-	initDB()
-
-	//	home
-	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
-	//	about
-	router.HandleFunc("/about", aboutHandeler).Methods("GET") //.Name("about")
-
-	//	get指定id返回对应内容
-	router.HandleFunc("/articles{id:[0-9]+}", articlesShowHandeler).Methods("GET").Name("articles.show")
-	//	get方法
-	router.HandleFunc("/articles", articlesIndexHandeler).Methods("GET").Name("articles.index")
-	//	POST方法
-	router.HandleFunc("/articles", articlesStoreHandeler).Methods("POST").Name("articles.store")
-
-	//	创建博文表单
-	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
-
-	//	重写404
-	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
-
-	//	中间件:强制内容为html
-	router.Use(forceHTMLMiddleware)
-
-	http.ListenAndServe(":3000", removeTrailingSlash(router))
-
 }
 
 /*
