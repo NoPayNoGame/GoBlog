@@ -45,7 +45,7 @@ func main() {
 	//	get方法
 	router.HandleFunc("/articles", articlesIndexHandeler).Methods("GET").Name("articles.index")
 	//	POST方法
-	router.HandleFunc("/articles", articlesStoreHandeler).Methods("POST").Name("articles.store")
+	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 
 	//	创建博文表单
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
@@ -158,7 +158,10 @@ func notFoundHandler(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprint(writer, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
 }
 
-func articlesStoreHandeler(writer http.ResponseWriter, request *http.Request) {
+/*
+POST 方法,发布内容 存入数据库
+*/
+func articlesStoreHandler(writer http.ResponseWriter, request *http.Request) {
 	//	如果解析错误,处理错误.
 	err := request.ParseForm()
 	if err != nil {
@@ -188,14 +191,15 @@ func articlesStoreHandeler(writer http.ResponseWriter, request *http.Request) {
 
 	//	检查是否有错误
 	if len(errors) == 0 {
-		fmt.Fprintf(writer, "验证通过!<br><br>")
-		fmt.Fprintf(writer, "title的值为:%v<br>", title)
-		fmt.Fprintf(writer, "title的长度为:%v<br><br>", utf8.RuneCountInString(title))
+		toDB, err := saveArtivcleToDB(title, body)
+		if toDB > 0 {
+			fmt.Fprintf(writer, "插入成功,ID为:%d", toDB)
+		} else {
+			checkError(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(writer, "500 服务器内部错误!")
+		}
 
-		fmt.Fprintf(writer, "body的值为%v<br>", body)
-		fmt.Fprintf(writer, "body的长度为%v<br>", utf8.RuneCountInString(body))
-
-		fmt.Println(1)
 	} else {
 		fmt.Println(2)
 
@@ -222,6 +226,51 @@ func articlesStoreHandeler(writer http.ResponseWriter, request *http.Request) {
 			fmt.Fprintf(writer, err.Error())
 		}
 	}
+}
+
+/*
+传入	文章标题和内容
+
+	数据插入数据库
+
+返回	插入行数,错误
+*/
+func saveArtivcleToDB(title string, body string) (int64, error) {
+	//	变量初始化
+	var (
+		id   int64
+		err  error
+		rs   sql.Result
+		stmt *sql.Stmt
+	)
+
+	//	获取一个prepare 声明语句
+	stmt, err = db.Prepare("INSERT INTO articles (title,body)values (?,?)")
+	//	例行错误检测
+	if err != nil {
+		return 0, err
+	}
+
+	// 在此函数运行结束后关闭此语句,防止占用 SQL 链接
+	defer stmt.Close()
+
+	// 执行请求,传参进入绑定的内容
+	rs, err = stmt.Exec(title, body)
+	if err != nil {
+		return 0, err
+	}
+
+	//	插入成功的话 会返回自增ID
+	id, err = rs.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	if id > 0 {
+		return id, nil
+	}
+
+	return 0, err
 }
 
 func articlesIndexHandeler(writer http.ResponseWriter, request *http.Request) {
