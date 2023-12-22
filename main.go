@@ -38,12 +38,12 @@ func main() {
 	//	home
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
 	//	about
-	router.HandleFunc("/about", aboutHandeler).Methods("GET") //.Name("about")
+	router.HandleFunc("/about", aboutHandler).Methods("GET") //.Name("about")
 
 	//	get指定id返回对应内容
-	router.HandleFunc("/articles{id:[0-9]+}", articlesShowHandeler).Methods("GET").Name("articles.show")
+	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
 	//	get方法
-	router.HandleFunc("/articles", articlesIndexHandeler).Methods("GET").Name("articles.index")
+	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	//	POST方法
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 
@@ -191,7 +191,7 @@ func articlesStoreHandler(writer http.ResponseWriter, request *http.Request) {
 
 	//	检查是否有错误
 	if len(errors) == 0 {
-		toDB, err := saveArtivcleToDB(title, body)
+		toDB, err := saveArticlesToDB(title, body)
 		if toDB > 0 {
 			fmt.Fprintf(writer, "插入成功,ID为:%d", toDB)
 		} else {
@@ -235,7 +235,7 @@ func articlesStoreHandler(writer http.ResponseWriter, request *http.Request) {
 
 返回	插入行数,错误
 */
-func saveArtivcleToDB(title string, body string) (int64, error) {
+func saveArticlesToDB(title string, body string) (int64, error) {
 	//	变量初始化
 	var (
 		id   int64
@@ -273,17 +273,55 @@ func saveArtivcleToDB(title string, body string) (int64, error) {
 	return 0, err
 }
 
-func articlesIndexHandeler(writer http.ResponseWriter, request *http.Request) {
+func articlesIndexHandler(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "GET访问文章列表")
 }
 
-func articlesShowHandeler(writer http.ResponseWriter, request *http.Request) {
-	vars := mux.Vars(request)
-	id := vars["id"]
-	fmt.Fprintf(writer, "请求的文章ID:"+id)
+//	必须大写,小写前端无法读取
+
+type Article struct {
+	Body, Title string
+	ID          int64
 }
 
-func aboutHandeler(writer http.ResponseWriter, request *http.Request) {
+func articlesShowHandler(writer http.ResponseWriter, request *http.Request) {
+	//	1.获取 URL 参数(获取请求的ID)
+	vars := mux.Vars(request)
+	id := vars["id"]
+
+	//	2.读取对应的文章数据
+	article := Article{}
+	query := "Select * from articles WHERE  id = ?"
+
+	//	QueryRow执行一次查询，并期望返回最多一行结果（即Row）。QueryRow总是返回非nil的值，直到返回值的Scan方法被调用时，才会返回被延迟的错误。（如：未找到结果）
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	//	3.如果出现错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			//	3.1 数据未找到
+			writer.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(writer, "404 文章未找到")
+		} else {
+			//	3.2 数据库错误
+			checkError(err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(writer, "500 服务器内部错误")
+		}
+	} else {
+		//	4 读取成功 显示文章
+		//fmt.Fprintf(writer, "读取成功<br>文章标题: "+article.title)
+		//fmt.Fprintf(writer, "<br>文章内容: "+article.body)
+		tmpl, err := template.ParseFiles("resources/views/articles/show.gohtml")
+		if err != nil {
+			checkError(err)
+		}
+
+		err = tmpl.Execute(writer, article)
+		checkError(err)
+	}
+}
+
+func aboutHandler(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "此博客是用以记录编程笔记，如您有反馈或建议，请联系 <a href=\"mailto:summer@example.com\">summer@example.com</a>")
 }
 
